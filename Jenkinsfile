@@ -13,22 +13,17 @@ pipeline {
                     sshagent(['ssh-credentials-id']) {
                         // Получаем список тегов образов и сортируем их
                         def tags = sh(script: "ssh -o StrictHostKeyChecking=no jenkins@192.168.66.191 'docker images my-node-js-app --format \"{{.Tag}}\"'", returnStdout: true).trim().split('\n')
-                        tags = tags.collect { it.replaceAll(/^v/, "").trim() }
+                        tags = tags.collect { it.replaceAll(/^v/, "").trim().toInteger() }
 
                         // Определяем количество тегов, которые вы хотите сохранить
                         def keepCount = 3
 
                         // Удаляем лишние теги
                         if (tags.size() > keepCount) {
-                            def tagsToRemove = tags.take(tags.size() - keepCount)
+                            def tagsToRemove = tags.sort()
                           //  def minTag = tagsToRemove.collect { it.toInteger() }.sort()[0]
-                            def min = tagsToRemove[0].toInteger()
-                            tagsToRemove.each { tag ->
-                                    if (tag.toInteger() < min) {
-                                        min = tag.toInteger()
-                                    }
-                                }
-                            sh "ssh -o StrictHostKeyChecking=no jenkins@192.168.66.191 'docker rmi my-node-js-app:v${min}'"    
+                            def min = tagsToRemove[0]
+                            sh "ssh -o StrictHostKeyChecking=no jenkins@192.168.66.191 'docker rmi my-node-js-app:v${min}'"   
                             }
                         }
                     }
